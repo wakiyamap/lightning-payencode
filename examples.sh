@@ -28,22 +28,22 @@ echo "### Now send \$24 for an entire list of things (hashed)"
 ./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
 echo
 
-echo '### The same, on testnet, with a fallback address mk2QpYatsKicvFVuTAQLBryyccRXMUaGHP'
-./lightning-address.py encode $TIMESTAMP --currency=tb --fallback=mk2QpYatsKicvFVuTAQLBryyccRXMUaGHP --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
+echo '### The same, on testnet, with a fallback address mivTxWUqB6yxQdbLnAfcTSaVXouAhTUDfs'
+./lightning-address.py encode $TIMESTAMP --currency=tmona --fallback=mivTxWUqB6yxQdbLnAfcTSaVXouAhTUDfs --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
 echo
 
-echo '### On mainnet, with fallback address 1RustyRX2oai4EYYDpQGWvEL62BBGqN9T with extra routing info to go via nodes 029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255 then 039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255'
-./lightning-address.py encode $TIMESTAMP --route=029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255/0102030405060708/1/20/3/039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255/030405060708090a/2/30/4 --fallback=1RustyRX2oai4EYYDpQGWvEL62BBGqN9T --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
+echo '### On mainnet, with fallback address MUJ1nBxpAzdGdNhTN1x3MCtyeBa4DbdqpK with extra routing info to go via nodes 029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255 then 039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255'
+./lightning-address.py encode $TIMESTAMP --route=029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255/0102030405060708/1/20/3/039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255/030405060708090a/2/30/4 --fallback=MUJ1nBxpAzdGdNhTN1x3MCtyeBa4DbdqpK --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
 echo
 
-echo '### On mainnet, with fallback (p2sh) address 3EktnHQD7RiAE6uzMj2ZifT9YgRrkSgzQX'
-./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=3EktnHQD7RiAE6uzMj2ZifT9YgRrkSgzQX $(to_btc 24) $RHASH $PRIVKEY
+echo '### On mainnet, with fallback (p2sh) address PHjTKtgYLTJ9D2Bzw2f6xBB41KBm2HeGfg'
+./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=PHjTKtgYLTJ9D2Bzw2f6xBB41KBm2HeGfg $(to_btc 24) $RHASH $PRIVKEY
 echo
 
-echo '### On mainnet, with fallback (p2wpkh) address bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'
-./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4 $(to_btc 24) $RHASH $PRIVKEY
+echo '### On mainnet, with fallback (p2wpkh) address mona1quunc907zfyj7cyxhnp9584rj0wmdka2ec9w3af'
+./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=mona1quunc907zfyj7cyxhnp9584rj0wmdka2ec9w3af $(to_btc 24) $RHASH $PRIVKEY
 echo
 
-echo '### On mainnet, with fallback (p2wsh) address bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3'
-./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3 $(to_btc 24) $RHASH $PRIVKEY
+echo '### On mainnet, with fallback (p2wsh) address mona1qp8f842ywwr9h5rdxyzggex7q3trvvvaarfssxccju52rj6htfzfsqr79j2'
+./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=mona1qp8f842ywwr9h5rdxyzggex7q3trvvvaarfssxccju52rj6htfzfsqr79j2 $(to_btc 24) $RHASH $PRIVKEY
 

@@ -77,7 +77,7 @@ def bitarray_to_u5(barr):
 def encode_fallback(fallback, currency):
     """ Encode all supported fallback addresses.
     """
-    if currency == 'bc' or currency == 'tb':
+    if currency == 'mona' or currency == 'tmona':
         fbhrp, witness = bech32_decode(fallback)
         if fbhrp:
             if fbhrp != currency:
@@ -100,7 +100,7 @@ def encode_fallback(fallback, currency):
         raise NotImplementedError("Support for currency {} not implemented".format(currency))
 
 def parse_fallback(fallback, currency):
-    if currency == 'bc' or currency == 'tb':
+    if currency == 'mona' or currency == 'tmona':
         wver = fallback[0:5].uint
         if wver == 17:
             addr=base58.b58encode_check(bytes([base58_prefix_map[currency][0]])
@@ -119,8 +119,8 @@ def parse_fallback(fallback, currency):
 
 # Map of classical and witness address prefixes
 base58_prefix_map = {
-    'bc' : (0, 5),
-    'tb' : (111, 196)
+    'mona' : (50, 55),
+    'tmona' : (111, 117)
 }
 
 def is_p2pkh(currency, prefix):
@@ -231,7 +231,7 @@ def lnencode(addr, privkey):
     return bech32_encode(hrp, bitarray_to_u5(data))
 
 class LnAddr(object):
-    def __init__(self, paymenthash=None, amount=None, currency='bc', tags=None, date=None):
+    def __init__(self, paymenthash=None, amount=None, currency='mona', tags=None, date=None):
         self.date = int(time.time()) if not date else int(date)
         self.tags = [] if not tags else tags
         self.unknown_tags = []

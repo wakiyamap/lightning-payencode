@@ -88,7 +88,7 @@ subparsers = parser.add_subparsers(dest='subparser_name',
 parser_enc = subparsers.add_parser('encode', help='encode help')
 parser_dec = subparsers.add_parser('decode', help='decode help')
 
-parser_enc.add_argument('--currency', default='bc',
+parser_enc.add_argument('--currency', default='mona',
                     help="What currency")
 parser_enc.add_argument('--route', action='append', default=[],
                         help="Extra route steps of form pubkey/channel/feebase/feerate/cltv+")
