@@ -156,6 +156,35 @@ def pull_tagged(stream):
     length = stream.read(5).uint * 32 + stream.read(5).uint
     return (CHARSET[tag], stream.read(length * 5), stream)
 
+# from electrum
+def validate_features(features: int) -> None:
+    """Raises IncompatibleOrInsaneFeatures if
+    - a mandatory feature is listed that we don't recognize, or
+    - the features are inconsistent
+    """
+    features = LnFeatures(features)
+    enabled_features = list_enabled_bits(features)
+    for fbit in enabled_features:
+        if (1 << fbit) & LN_FEATURES_IMPLEMENTED == 0 and fbit % 2 == 0:
+            raise UnknownEvenFeatureBits(fbit)
+    if not features.validate_transitive_dependecies():
+        raise IncompatibleOrInsaneFeatures("not all transitive dependencies are set")
+
+def trim_to_min_length(bits):
+    """Ensures 'bits' have min number of leading zeroes.
+    Assumes 'bits' is big-endian, and that it needs to be encoded in 5 bit blocks.
+    """
+    bits = bits[:]  # copy
+    # make sure we can be split into 5 bit blocks
+    while bits.len % 5 != 0:
+        bits.prepend('0b0')
+    # Get minimal length by trimming leading 5 bits at a time.
+    while bits.startswith('0b00000'):
+        if len(bits) == 5:
+            break  # v == 0
+        bits = bits[5:]
+    return bits
+
 def lnencode(addr, privkey):
     if addr.amount:
         amount = Decimal(str(addr.amount))
@@ -177,12 +206,16 @@ def lnencode(addr, privkey):
     data += tagged_bytes('p', addr.paymenthash)
     tags_set = set()
 
+    if addr.payment_secret is not None:
+        data += tagged_bytes('s', addr.payment_secret)
+        tags_set.add('s')
+
     for k, v in addr.tags:
 
         # BOLT #11:
         #
-        # A writer MUST NOT include more than one `d`, `h`, `n` or `x` fields,
-        if k in ('d', 'h', 'n', 'x'):
+        # A writer MUST NOT include more than one `d`, `h`, `n`, `x`, `p` or `s` fields,
+        if k in ('d', 'h', 'n', 'x', 'p', 's'):
             if k in tags_set:
                 raise ValueError("Duplicate '{}' tag".format(k))
 
@@ -206,6 +239,16 @@ def lnencode(addr, privkey):
             data += tagged_bytes('h', hashlib.sha256(v.encode('utf-8')).digest())
         elif k == 'n':
             data += tagged_bytes('n', v)
+        elif k == 'c':
+            finalcltvbits = bitstring.pack('intbe:64', v)
+            finalcltvbits = trim_to_min_length(finalcltvbits)
+            data += tagged('c', finalcltvbits)
+        elif k == '9':
+            if v == 0:
+                continue
+            feature_bits = bitstring.BitArray(uint=v, length=v.bit_length())
+            feature_bits = trim_to_min_length(feature_bits)
+            data += tagged('9', feature_bits)
         else:
             # FIXME: Support unknown tags?
             raise ValueError("Unknown tag {}".format(k))
@@ -231,15 +274,18 @@ def lnencode(addr, privkey):
     return bech32_encode(hrp, bitarray_to_u5(data))
 
 class LnAddr(object):
-    def __init__(self, paymenthash=None, amount=None, currency='mona', tags=None, date=None):
+    def __init__(self, paymenthash: bytes = None, amount=None, currency='mona', tags=None, date=None,
+            payment_secret: bytes = None):
         self.date = int(time.time()) if not date else int(date)
         self.tags = [] if not tags else tags
         self.unknown_tags = []
         self.paymenthash=paymenthash
+        self.payment_secret = payment_secret
         self.signature = None
         self.pubkey = None
         self.currency = currency
         self.amount = amount
+        self.min_final_cltv_expiry = 9
 
     def __str__(self):
         return "LnAddr[{}, amount={}{} tags=[{}]]".format(
@@ -341,12 +387,27 @@ def lndecode(a, verbose=False):
                 continue
             addr.paymenthash = trim_to_bytes(tagdata)
 
+        elif tag == 's':
+            if data_length != 52:
+                addr.unknown_tags.append((tag, tagdata))
+                continue
+            addr.payment_secret = trim_to_bytes(tagdata)
+
         elif tag == 'n':
             if data_length != 53:
                 addr.unknown_tags.append((tag, tagdata))
                 continue
             addr.pubkey = secp256k1.PublicKey(flags=secp256k1.ALL_FLAGS)
             addr.pubkey.deserialize(trim_to_bytes(tagdata))
+
+        elif tag == 'c':
+            addr.min_final_cltv_expiry = tagdata.int
+
+        elif tag == '9':
+            features = tagdata.uint
+            addr.tags.append(('9', features))
+            self.validate_features(features)
+
         else:
             addr.unknown_tags.append((tag, tagdata))
 
@@ -368,7 +429,7 @@ def lndecode(a, verbose=False):
         #
         # A reader MUST use the `n` field to validate the signature instead of
         # performing signature recovery if a valid `n` field is provided.
-        addr.signature = addr.pubkey.ecdsa_deserialize_compact(sigdecoded[0:64])
+        addr.signature = addr.pubkey.ecdsa_deserialize_compact(sigdecoded[0:65])
         if not addr.pubkey.ecdsa_verify(bytearray([ord(c) for c in hrp]) + data.tobytes(), addr.signature):
             raise ValueError('Invalid signature')
     else: # Recover pubkey from signature.
