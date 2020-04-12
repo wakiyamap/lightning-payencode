@@ -18,6 +18,8 @@ def encode(options):
         addr.date = int(options.timestamp)
 
     addr.paymenthash = unhexlify(options.paymenthash)
+    if options.paymentsecret:
+        addr.paymentsecret = unhexlify(options.paymentsecret)
 
     if options.description:
         addr.tags.append(('d', options.description))
@@ -25,9 +27,13 @@ def encode(options):
         addr.tags.append(('h', options.description_hashed))
     if options.expires:
         addr.tags.append(('x', options.expires))
+    if options.min_final_cltv_expire:
+        addr.tags.append(('c', options.min_final_cltv_expire))
 
     if options.fallback:
         addr.tags.append(('f', options.fallback))
+    if options.features:
+        addr.tags.append(('9', ('options.features'.encode('utf-8'))))
 
     for r in options.route:
         splits = r.split('/')
@@ -52,6 +58,8 @@ def decode(options):
     print("Signed with public key:", hexlify(a.pubkey.serialize()))
     print("Currency:", a.currency)
     print("Payment hash:", hexlify(a.paymenthash))
+    if a.paymentsecret:
+        print("Payment secret:", hexlify(a.paymentsecret))
     if a.amount:
         print("Amount:", a.amount)
     print("Timestamp: {} ({})".format(a.date, time.ctime(a.date)))
@@ -74,9 +82,11 @@ def decode(options):
     if dhash:
         print("Description hash:", hexlify(dhash[0]))
 
-    expiry = tags_by_name('x', a.tags)
-    if expiry:
-        print("Expiry (seconds):", expiry[0])
+    features = tags_by_name('9', a.tags)
+    if features:
+        print("features:", hexlify(a.features))
+
+    print("Payment secret:", hexlify(a.paymentsecret))
 
     for t in [t for t in a.tags if t[0] not in 'rdfhx']:
         print("UNKNOWN TAG {}: {}".format(t[0], hexlify(t[1])))
@@ -98,8 +108,12 @@ parser_enc.add_argument('--description',
                         help='What is being purchased')
 parser_enc.add_argument('--description-hashed',
                         help='What is being purchased (for hashing)')
+parser_enc.add_argument('--paymentsecret', help='Payment secret (in hex)')
+parser_enc.add_argument('--features', help='One or more 5-bit values containing features supported or required for receiving this payment (in hex)')
 parser_enc.add_argument('--expires', type=int,
                         help='Seconds before offer expires')
+parser_enc.add_argument('--min-final-cltv-expire', type=int,
+                        help='Using for the last HTLC in the route')
 parser_enc.add_argument('--timestamp', type=int,
                         help='Timestamp (seconds after epoch) instead of now')
 parser_enc.add_argument('--no-amount', action="store_true",

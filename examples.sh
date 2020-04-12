@@ -9,6 +9,9 @@ PUBKEY=03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad
 # Reproducable example, set timestamp.
 TIMESTAMP=--timestamp=1496314658
 
+PAYMENT_SECRET=1111111111111111111111111111111111111111111111111111111111111111
+
+SHORT_DESCRIPTION='coffee beans'
 LONG_DESCRIPTION='One piece of chocolate cake, one icecream cone, one pickle, one slice of swiss cheese, one slice of salami, one lollypop, one piece of cherry pie, one sausage, one cupcake, and one slice of watermelon'
 
 to_btc()
@@ -46,4 +49,8 @@ echo
 
 echo '### On mainnet, with fallback (p2wsh) address mona1qp8f842ywwr9h5rdxyzggex7q3trvvvaarfssxccju52rj6htfzfsqr79j2'
 ./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=mona1qp8f842ywwr9h5rdxyzggex7q3trvvvaarfssxccju52rj6htfzfsqr79j2 $(to_btc 24) $RHASH $PRIVKEY
+echo
+
+echo '### Please send $30 for coffee beans to the same peer, which supports features 9, 15 and 99, using secret 0x1111111111111111111111111111111111111111111111111111111111111111'
+./lightning-address.py encode $TIMESTAMP --currency=bc --description="coffee beans" --paymentsecret="$PAYMENT_SECRET" --features="sqqqqqqqqqqqqqqqpqsq" $(to_btc 30) $RHASH $PRIVKEY
 

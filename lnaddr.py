@@ -2,10 +2,14 @@
 from bech32 import bech32_encode, bech32_decode, CHARSET
 from binascii import hexlify, unhexlify
 from bitstring import BitArray
+from collections import defaultdict
 from decimal import Decimal
+from enum import IntFlag
+from typing import Sequence
 
 import base58
 import bitstring
+import enum
 import hashlib
 import math
 import re
@@ -157,6 +161,129 @@ def pull_tagged(stream):
     return (CHARSET[tag], stream.read(length * 5), stream)
 
 # from electrum
+def list_enabled_bits(x: int) -> Sequence[int]:
+    """e.g. 77 (0b1001101) --> (0, 2, 3, 6)"""
+    binary = bin(x)[2:]
+    rev_bin = reversed(binary)
+    return tuple(i for i, b in enumerate(rev_bin) if b == '1')
+
+class LnFeatureContexts(enum.Flag):
+    INIT = enum.auto()
+    NODE_ANN = enum.auto()
+    CHAN_ANN_AS_IS = enum.auto()
+    CHAN_ANN_ALWAYS_ODD = enum.auto()
+    CHAN_ANN_ALWAYS_EVEN = enum.auto()
+    INVOICE = enum.auto()
+
+LNFC = LnFeatureContexts
+
+_ln_feature_direct_dependencies = defaultdict(set)  # type: Dict[LnFeatures, Set[LnFeatures]]
+_ln_feature_contexts = {}  # type: Dict[LnFeatures, LnFeatureContexts]
+
+class LnFeatures(IntFlag):
+    OPTION_DATA_LOSS_PROTECT_REQ = 1 << 0
+    OPTION_DATA_LOSS_PROTECT_OPT = 1 << 1
+    _ln_feature_contexts[OPTION_DATA_LOSS_PROTECT_OPT] = (LNFC.INIT | LnFeatureContexts.NODE_ANN)
+    _ln_feature_contexts[OPTION_DATA_LOSS_PROTECT_REQ] = (LNFC.INIT | LnFeatureContexts.NODE_ANN)
+
+    INITIAL_ROUTING_SYNC = 1 << 3
+    _ln_feature_contexts[INITIAL_ROUTING_SYNC] = LNFC.INIT
+
+    OPTION_UPFRONT_SHUTDOWN_SCRIPT_REQ = 1 << 4
+    OPTION_UPFRONT_SHUTDOWN_SCRIPT_OPT = 1 << 5
+    _ln_feature_contexts[OPTION_UPFRONT_SHUTDOWN_SCRIPT_OPT] = (LNFC.INIT | LNFC.NODE_ANN)
+    _ln_feature_contexts[OPTION_UPFRONT_SHUTDOWN_SCRIPT_REQ] = (LNFC.INIT | LNFC.NODE_ANN)
+
+    GOSSIP_QUERIES_REQ = 1 << 6
+    GOSSIP_QUERIES_OPT = 1 << 7
+    _ln_feature_contexts[GOSSIP_QUERIES_OPT] = (LNFC.INIT | LNFC.NODE_ANN)
+    _ln_feature_contexts[GOSSIP_QUERIES_REQ] = (LNFC.INIT | LNFC.NODE_ANN)
+
+    VAR_ONION_REQ = 1 << 8
+    VAR_ONION_OPT = 1 << 9
+    _ln_feature_contexts[VAR_ONION_OPT] = (LNFC.INIT | LNFC.NODE_ANN | LNFC.INVOICE)
+    _ln_feature_contexts[VAR_ONION_REQ] = (LNFC.INIT | LNFC.NODE_ANN | LNFC.INVOICE)
+
+    GOSSIP_QUERIES_EX_REQ = 1 << 10
+    GOSSIP_QUERIES_EX_OPT = 1 << 11
+    _ln_feature_direct_dependencies[GOSSIP_QUERIES_EX_OPT] = {GOSSIP_QUERIES_OPT}
+    _ln_feature_contexts[GOSSIP_QUERIES_EX_OPT] = (LNFC.INIT | LNFC.NODE_ANN)
+    _ln_feature_contexts[GOSSIP_QUERIES_EX_REQ] = (LNFC.INIT | LNFC.NODE_ANN)
+
+    OPTION_STATIC_REMOTEKEY_REQ = 1 << 12
+    OPTION_STATIC_REMOTEKEY_OPT = 1 << 13
+    _ln_feature_contexts[OPTION_STATIC_REMOTEKEY_OPT] = (LNFC.INIT | LNFC.NODE_ANN)
+    _ln_feature_contexts[OPTION_STATIC_REMOTEKEY_REQ] = (LNFC.INIT | LNFC.NODE_ANN)
+
+    PAYMENT_SECRET_REQ = 1 << 14
+    PAYMENT_SECRET_OPT = 1 << 15
+    _ln_feature_direct_dependencies[PAYMENT_SECRET_OPT] = {VAR_ONION_OPT}
+    _ln_feature_contexts[PAYMENT_SECRET_OPT] = (LNFC.INIT | LNFC.NODE_ANN | LNFC.INVOICE)
+    _ln_feature_contexts[PAYMENT_SECRET_REQ] = (LNFC.INIT | LNFC.NODE_ANN | LNFC.INVOICE)
+
+    BASIC_MPP_REQ = 1 << 16
+    BASIC_MPP_OPT = 1 << 17
+    _ln_feature_direct_dependencies[BASIC_MPP_OPT] = {PAYMENT_SECRET_OPT}
+    _ln_feature_contexts[BASIC_MPP_OPT] = (LNFC.INIT | LNFC.NODE_ANN | LNFC.INVOICE)
+    _ln_feature_contexts[BASIC_MPP_REQ] = (LNFC.INIT | LNFC.NODE_ANN | LNFC.INVOICE)
+
+    OPTION_SUPPORT_LARGE_CHANNEL_REQ = 1 << 18
+    OPTION_SUPPORT_LARGE_CHANNEL_OPT = 1 << 19
+    _ln_feature_contexts[OPTION_SUPPORT_LARGE_CHANNEL_OPT] = (LNFC.INIT | LNFC.NODE_ANN | LNFC.CHAN_ANN_ALWAYS_EVEN)
+    _ln_feature_contexts[OPTION_SUPPORT_LARGE_CHANNEL_REQ] = (LNFC.INIT | LNFC.NODE_ANN | LNFC.CHAN_ANN_ALWAYS_EVEN)
+
+    def validate_transitive_dependecies(self) -> bool:
+        # for all even bit set, set corresponding odd bit:
+        features = self  # copy
+        flags = list_enabled_bits(features)
+        for flag in flags:
+            if flag % 2 == 0:
+                features |= 1 << get_ln_flag_pair_of_bit(flag)
+        # Check dependencies. We only check that the direct dependencies of each flag set
+        # are satisfied: this implies that transitive dependencies are also satisfied.
+        flags = list_enabled_bits(features)
+        for flag in flags:
+            for dependency in _ln_feature_direct_dependencies[1 << flag]:
+                if not (dependency & features):
+                    return False
+        return True
+
+    def for_init_message(self) -> 'LnFeatures':
+        features = LnFeatures(0)
+        for flag in list_enabled_bits(self):
+            if LnFeatureContexts.INIT & _ln_feature_contexts[1 << flag]:
+                features |= (1 << flag)
+        return features
+
+    def for_node_announcement(self) -> 'LnFeatures':
+        features = LnFeatures(0)
+        for flag in list_enabled_bits(self):
+            if LnFeatureContexts.NODE_ANN & _ln_feature_contexts[1 << flag]:
+                features |= (1 << flag)
+        return features
+
+    def for_invoice(self) -> 'LnFeatures':
+        features = LnFeatures(0)
+        for flag in list_enabled_bits(self):
+            if LnFeatureContexts.INVOICE & _ln_feature_contexts[1 << flag]:
+                features |= (1 << flag)
+        return features
+
+    def for_channel_announcement(self) -> 'LnFeatures':
+        features = LnFeatures(0)
+        for flag in list_enabled_bits(self):
+            ctxs = _ln_feature_contexts[1 << flag]
+            if LnFeatureContexts.CHAN_ANN_AS_IS & ctxs:
+                features |= (1 << flag)
+            elif LnFeatureContexts.CHAN_ANN_ALWAYS_EVEN & ctxs:
+                if flag % 2 == 0:
+                    features |= (1 << flag)
+            elif LnFeatureContexts.CHAN_ANN_ALWAYS_ODD & ctxs:
+                if flag % 2 == 0:
+                    flag = get_ln_flag_pair_of_bit(flag)
+                features |= (1 << flag)
+        return features
+
 def validate_features(features: int) -> None:
     """Raises IncompatibleOrInsaneFeatures if
     - a mandatory feature is listed that we don't recognize, or
@@ -202,19 +329,18 @@ def lnencode(addr, privkey):
     # Start with the timestamp
     data = bitstring.pack('uint:35', addr.date)
 
-    # Payment hash
-    data += tagged_bytes('p', addr.paymenthash)
     tags_set = set()
 
-    if addr.payment_secret is not None:
-        data += tagged_bytes('s', addr.payment_secret)
-        tags_set.add('s')
+    # Payment hash
+    data += tagged_bytes('p', addr.paymenthash)
+    tags_set.add('p')
+
 
     for k, v in addr.tags:
 
         # BOLT #11:
         #
-        # A writer MUST NOT include more than one `d`, `h`, `n`, `x`, `p` or `s` fields,
+        # A writer MUST NOT include more than one `d`, `h`, `n` or `x` fields,
         if k in ('d', 'h', 'n', 'x', 'p', 's'):
             if k in tags_set:
                 raise ValueError("Duplicate '{}' tag".format(k))
@@ -230,10 +356,8 @@ def lnencode(addr, privkey):
         elif k == 'd':
             data += tagged_bytes('d', v.encode())
         elif k == 'x':
-            # Get minimal length by trimming leading 5 bits at a time.
-            expirybits = bitstring.pack('intbe:64', v)[4:64]
-            while expirybits.startswith('0b00000'):
-                expirybits = expirybits[5:]
+            expirybits = bitstring.pack('intbe:64', v)
+            expirybits = trim_to_min_length(expirybits)
             data += tagged('x', expirybits)
         elif k == 'h':
             data += tagged_bytes('h', hashlib.sha256(v.encode('utf-8')).digest())
@@ -255,6 +379,12 @@ def lnencode(addr, privkey):
 
         tags_set.add(k)
 
+    # Payment secret
+    if addr.paymentsecret is not None:
+        data += tagged_bytes('s', addr.paymentsecret)
+        tags_set.add('s')
+
+    print(data)
     # BOLT #11:
     #
     # A writer MUST include either a `d` or `h` field, and MUST NOT include
@@ -274,13 +404,12 @@ def lnencode(addr, privkey):
     return bech32_encode(hrp, bitarray_to_u5(data))
 
 class LnAddr(object):
-    def __init__(self, paymenthash: bytes = None, amount=None, currency='mona', tags=None, date=None,
-            payment_secret: bytes = None):
+    def __init__(self, paymenthash: bytes = None, amount=None, currency='mona', tags=None, date=None, paymentsecret: bytes = None):
         self.date = int(time.time()) if not date else int(date)
         self.tags = [] if not tags else tags
         self.unknown_tags = []
         self.paymenthash=paymenthash
-        self.payment_secret = payment_secret
+        self.paymentsecret = paymentsecret
         self.signature = None
         self.pubkey = None
         self.currency = currency
@@ -391,7 +520,7 @@ def lndecode(a, verbose=False):
             if data_length != 52:
                 addr.unknown_tags.append((tag, tagdata))
                 continue
-            addr.payment_secret = trim_to_bytes(tagdata)
+            addr.paymentsecret = trim_to_bytes(tagdata)
 
         elif tag == 'n':
             if data_length != 53:
