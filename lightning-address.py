@@ -33,7 +33,7 @@ def encode(options):
     if options.fallback:
         addr.tags.append(('f', options.fallback))
     if options.features:
-        addr.tags.append(('9', ('options.features'.encode('utf-8'))))
+        addr.tags.append(('9', unhexlify(options.features)))
 
     for r in options.route:
         splits = r.split('/')

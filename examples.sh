@@ -10,6 +10,7 @@ PUBKEY=03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad
 TIMESTAMP=--timestamp=1496314658
 
 PAYMENT_SECRET=1111111111111111111111111111111111111111111111111111111111111111
+FEATURES1=
 
 SHORT_DESCRIPTION='coffee beans'
 LONG_DESCRIPTION='One piece of chocolate cake, one icecream cone, one pickle, one slice of swiss cheese, one slice of salami, one lollypop, one piece of cherry pie, one sausage, one cupcake, and one slice of watermelon'
@@ -19,38 +20,38 @@ to_btc()
     echo $1 / $CONVERSION_RATE | bc -l
 }
 
-echo "### Please make a donation of any amount using rhash $RHASH to me @$PUBKEY"
-./lightning-address.py encode $TIMESTAMP --no-amount 0 --description='Please consider supporting this project' $RHASH $PRIVKEY
-echo
+#echo "### Please make a donation of any amount using rhash $RHASH to me @$PUBKEY"
+#./lightning-address.py encode $TIMESTAMP --no-amount 0 --description='Please consider supporting this project' $RHASH $PRIVKEY
+#echo
 
-echo "### Please send \$3 for a cup of nonsense (ナンセンス 1杯) to the same peer, within 1 minute"
-./lightning-address.py encode $TIMESTAMP --description='ナンセンス 1杯' $(to_btc 3) --expires=60 $RHASH $PRIVKEY
-echo
+#echo "### Please send \$3 for a cup of nonsense (ナンセンス 1杯) to the same peer, within 1 minute"
+#./lightning-address.py encode $TIMESTAMP --description='ナンセンス 1杯' $(to_btc 3) --expires=60 $RHASH $PRIVKEY
+#echo
 
-echo "### Now send \$24 for an entire list of things (hashed)"
-./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
-echo
+#echo "### Now send \$24 for an entire list of things (hashed)"
+#./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
+#echo
 
-echo '### The same, on testnet, with a fallback address mivTxWUqB6yxQdbLnAfcTSaVXouAhTUDfs'
-./lightning-address.py encode $TIMESTAMP --currency=tmona --fallback=mivTxWUqB6yxQdbLnAfcTSaVXouAhTUDfs --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
-echo
+#echo '### The same, on testnet, with a fallback address mivTxWUqB6yxQdbLnAfcTSaVXouAhTUDfs'
+#./lightning-address.py encode $TIMESTAMP --currency=tmona --fallback=mivTxWUqB6yxQdbLnAfcTSaVXouAhTUDfs --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
+#echo
 
-echo '### On mainnet, with fallback address MUJ1nBxpAzdGdNhTN1x3MCtyeBa4DbdqpK with extra routing info to go via nodes 029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255 then 039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255'
-./lightning-address.py encode $TIMESTAMP --route=029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255/0102030405060708/1/20/3/039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255/030405060708090a/2/30/4 --fallback=MUJ1nBxpAzdGdNhTN1x3MCtyeBa4DbdqpK --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
-echo
+#echo '### On mainnet, with fallback address MUJ1nBxpAzdGdNhTN1x3MCtyeBa4DbdqpK with extra routing info to go via nodes 029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255 then 039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255'
+#./lightning-address.py encode $TIMESTAMP --route=029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255/0102030405060708/1/20/3/039e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c77255/030405060708090a/2/30/4 --fallback=MUJ1nBxpAzdGdNhTN1x3MCtyeBa4DbdqpK --description-hashed="$LONG_DESCRIPTION" $(to_btc 24) $RHASH $PRIVKEY
+#echo
 
-echo '### On mainnet, with fallback (p2sh) address PHjTKtgYLTJ9D2Bzw2f6xBB41KBm2HeGfg'
-./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=PHjTKtgYLTJ9D2Bzw2f6xBB41KBm2HeGfg $(to_btc 24) $RHASH $PRIVKEY
-echo
+#echo '### On mainnet, with fallback (p2sh) address PHjTKtgYLTJ9D2Bzw2f6xBB41KBm2HeGfg'
+#./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=PHjTKtgYLTJ9D2Bzw2f6xBB41KBm2HeGfg $(to_btc 24) $RHASH $PRIVKEY
+#echo
 
-echo '### On mainnet, with fallback (p2wpkh) address mona1quunc907zfyj7cyxhnp9584rj0wmdka2ec9w3af'
-./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=mona1quunc907zfyj7cyxhnp9584rj0wmdka2ec9w3af $(to_btc 24) $RHASH $PRIVKEY
-echo
+#echo '### On mainnet, with fallback (p2wpkh) address mona1quunc907zfyj7cyxhnp9584rj0wmdka2ec9w3af'
+#./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=mona1quunc907zfyj7cyxhnp9584rj0wmdka2ec9w3af $(to_btc 24) $RHASH $PRIVKEY
+#echo
 
-echo '### On mainnet, with fallback (p2wsh) address mona1qp8f842ywwr9h5rdxyzggex7q3trvvvaarfssxccju52rj6htfzfsqr79j2'
-./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=mona1qp8f842ywwr9h5rdxyzggex7q3trvvvaarfssxccju52rj6htfzfsqr79j2 $(to_btc 24) $RHASH $PRIVKEY
-echo
+#echo '### On mainnet, with fallback (p2wsh) address mona1qp8f842ywwr9h5rdxyzggex7q3trvvvaarfssxccju52rj6htfzfsqr79j2'
+#./lightning-address.py encode $TIMESTAMP --description-hashed="$LONG_DESCRIPTION" --fallback=mona1qp8f842ywwr9h5rdxyzggex7q3trvvvaarfssxccju52rj6htfzfsqr79j2 $(to_btc 24) $RHASH $PRIVKEY
+#echo
 
 echo '### Please send $30 for coffee beans to the same peer, which supports features 9, 15 and 99, using secret 0x1111111111111111111111111111111111111111111111111111111111111111'
-./lightning-address.py encode $TIMESTAMP --currency=bc --description="coffee beans" --paymentsecret="$PAYMENT_SECRET" --features="sqqqqqqqqqqqqqqqpqsq" $(to_btc 30) $RHASH $PRIVKEY
+./lightning-address.py encode $TIMESTAMP --description="coffee beans" --paymentsecret="$PAYMENT_SECRET" --features="$FERTURES1" $(to_btc 30) $RHASH $PRIVKEY
 
